@@ -7,7 +7,7 @@ A simple little genserver that keeps a maxmind geolocation database up to date
 ```elixir
 def deps do
   [
-    {:ex_geo, "~> 1.0.0"}
+    {:ex_geo, "~> 1.1.0"}
   ]
 end
 ```
