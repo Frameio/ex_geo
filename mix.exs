@@ -1,7 +1,7 @@
 defmodule ExGeo.MixProject do
   use Mix.Project
 
-  @version "0.1.0"
+  @version "1.0.0"
 
   def project do
     [
@@ -26,7 +26,8 @@ defmodule ExGeo.MixProject do
   defp deps do
     [
       {:mmdb2_decoder, "~> 0.3.0"},
-      {:httpoison, "~> 1.2.0"}
+      {:httpoison, "~> 1.2.0"},
+      {:ex_doc, "~> 0.18.0", only: :dev}
     ]
   end
 
