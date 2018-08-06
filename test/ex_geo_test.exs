@@ -4,6 +4,7 @@ defmodule ExGeoTest do
 
   describe "#lookup!/1" do
     test "It will lookup geolocation data" do
+      :timer.sleep(1000)
       %ExGeo.Result{} = result = ExGeo.lookup!("2604:2000:f88d:1b00:6963:5e5e:61bc:8426")
 
       assert result.city == "New York"

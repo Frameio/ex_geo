@@ -19,14 +19,19 @@ defmodule ExGeo.Store do
 
   def init(_) do
     send(self(), :download)
-    {:ok, []}
+    {:ok, :ets.new(:exgeo_store, [:named_table, :set, :protected])}
   end
 
   @doc """
   Fetches the current geo db
   """
   @spec fetch() :: {:ok, MMDB2Decoder.parse_result} | {:error, :download_error}
-  def fetch(), do: GenServer.call(__MODULE__, :db)
+  def fetch() do
+    case :ets.lookup(:exgeo_store, :db) do
+      [{:db, db}] -> {:ok, db}
+      _ -> {:error, :download_error}
+    end
+  end
 
   @doc """
   Same as fetch but throws if not found
@@ -44,7 +49,12 @@ defmodule ExGeo.Store do
   the db failed to download
   """
   @spec query(ExGeo.ip_address) :: {:ok, map} | {:error, :download_error | :not_found}
-  def query(ip), do: GenServer.call(__MODULE__, {:query, ip})
+  def query(ip) do
+    with {:ok, db} <- fetch() do
+      MMDB2Decoder.pipe_lookup(db, ip)
+      |> query_result()
+    end
+  end
 
   @doc """
   Same as `query/1` except will throw an `Exception.t` if no db has been downloaded
@@ -58,27 +68,23 @@ defmodule ExGeo.Store do
     end
   end
 
-  def handle_call(_, _from, {:invaliddb, reason} = state), do: {:reply, {:error, reason}, state}
-  def handle_call({:query, ip}, _from, state) do
-    MMDB2Decoder.pipe_lookup(state, ip)
-    |> query_result(state)
-  end
-  def handle_call(:db, _from, state), do: {:reply, {:ok, state}, state}
-
-  def handle_info(:download, _) do
+  def handle_info(:download, table) do
     schedule_download()
 
     Downloader.download!(@url)
     |> :zlib.gunzip()
     |> MMDB2Decoder.parse_database()
-    |> store()
+    |> store(table)
   end
 
-  defp query_result(nil, state), do: {:reply, {:error, :not_found}, state}
-  defp query_result(result, state), do: {:reply, {:ok, result}, state}
+  defp query_result(nil), do: {:error, :not_found}
+  defp query_result(result), do: {:ok, result}
 
-  defp store({_meta, _tree, _data} = result), do: {:noreply, result}
-  defp store(_), do: {:noreply, {:invaliddb, :download_error}}
+  defp store({_meta, _tree, _data} = result, table) do
+    :ets.insert(table, {:db, result})
+    {:noreply, table}
+  end
+  defp store(_, table), do: {:noreply, table}
 
   defp schedule_download(duration \\ @day), do: Process.send_after(self(), :download, duration)
 end
