@@ -19,7 +19,7 @@ defmodule ExGeo.Store do
 
   def init(_) do
     send(self(), :download)
-    {:ok, :ets.new(:exgeo_store, [:named_table, :set, :protected])}
+    {:ok, :ets.new(:exgeo_store, [:named_table, :set, :protected, read_concurrency: true])}
   end
 
   @doc """
