@@ -27,7 +27,7 @@ defmodule ExGeo.MixProject do
     [
       {:mmdb2_decoder, "~> 0.3.0"},
       {:httpoison, "~> 1.2.0"},
-      {:ex_doc, "~> 0.18.0", only: :dev}
+      {:ex_doc, "~> 0.19", only: :dev}
     ]
   end
 
