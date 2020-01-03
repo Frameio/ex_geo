@@ -25,7 +25,7 @@ defmodule ExGeo.Store do
   @doc """
   Fetches the current geo db
   """
-  @spec fetch() :: {:ok, MMDB2Decoder.parse_result} | {:error, :download_error}
+  @spec fetch() :: {:ok, MMDB2Decoder.parse_result()} | {:error, :download_error}
   def fetch() do
     case :ets.lookup(:exgeo_store, :db) do
       [{:db, db}] -> {:ok, db}
@@ -36,7 +36,7 @@ defmodule ExGeo.Store do
   @doc """
   Same as fetch but throws if not found
   """
-  @spec fetch!() :: MMDB2Decoder.parse_result
+  @spec fetch!() :: MMDB2Decoder.parse_result()
   def fetch!() do
     case fetch() do
       {:ok, db} -> db
@@ -48,7 +48,7 @@ defmodule ExGeo.Store do
   Queries the stored maxmind database and returns a raw result if found.  Fails if
   the db failed to download
   """
-  @spec query(ExGeo.ip_address) :: {:ok, map} | {:error, :download_error | :not_found}
+  @spec query(ExGeo.ip_address()) :: {:ok, map} | {:error, :download_error | :not_found}
   def query(ip) do
     with {:ok, db} <- fetch() do
       MMDB2Decoder.pipe_lookup(db, ip)
@@ -59,7 +59,7 @@ defmodule ExGeo.Store do
   @doc """
   Same as `query/1` except will throw an `Exception.t` if no db has been downloaded
   """
-  @spec query!(ExGeo.ip_address) :: map
+  @spec query!(ExGeo.ip_address()) :: map
   def query!(ip) do
     case query(ip) do
       {:ok, result} -> result
@@ -71,8 +71,14 @@ defmodule ExGeo.Store do
   def handle_info(:download, table) do
     schedule_download()
 
+    helper =
+      case @config[:helper] do
+        nil -> fn x -> x end
+        helper_mod -> &helper_mod.handle/1
+      end
+
     Downloader.download!(@url)
-    |> :zlib.gunzip()
+    |> helper.()
     |> MMDB2Decoder.parse_database()
     |> store(table)
   end
@@ -84,6 +90,7 @@ defmodule ExGeo.Store do
     :ets.insert(table, {:db, result})
     {:noreply, table}
   end
+
   defp store(_, table), do: {:noreply, table}
 
   defp schedule_download(duration \\ @day), do: Process.send_after(self(), :download, duration)
