@@ -9,10 +9,6 @@ defmodule ExGeo.Store do
     defexception message: "Failed to get db"
   end
 
-  @config Application.get_env(:ex_geo, __MODULE__)
-  @day @config[:lookup_interval]
-  @url @config[:url]
-
   def start_link() do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
@@ -72,12 +68,13 @@ defmodule ExGeo.Store do
     schedule_download()
 
     helper =
-      case @config[:helper] do
+      case Application.get_env(:ex_geo, __MODULE__)[:helper] do
         nil -> fn x -> x end
         helper_mod -> &helper_mod.handle/1
       end
 
-    Downloader.download!(@url)
+    Application.get_env(:ex_geo, __MODULE__)[:url]
+    |> Downloader.download!()
     |> helper.()
     |> MMDB2Decoder.parse_database()
     |> store(table)
@@ -93,5 +90,8 @@ defmodule ExGeo.Store do
 
   defp store(_, table), do: {:noreply, table}
 
-  defp schedule_download(duration \\ @day), do: Process.send_after(self(), :download, duration)
+  defp schedule_download(duration \\ nil) do
+    duration = duration || Application.get_env(:ex_geo, __MODULE__)[:lookup_interval]
+    Process.send_after(self(), :download, duration)
+  end
 end
