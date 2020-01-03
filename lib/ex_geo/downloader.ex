@@ -18,7 +18,18 @@ defmodule ExGeo.Downloader do
   end
 end
 
+defmodule ExGeo.Downloader.Helper do
+  @moduledoc """
+  Callback module for extracting an MMBD file from the result of
+  `ExGeo.Downloader`.
+  """
+  @callback handle(String.t()) :: String.t()
+end
+
 defmodule ExGeo.Downloader.MaxmindHelper do
+  @behaviour ExGeo.Downloader.Helper
+
+  @impl ExGeo.Downloader.Helper
   def handle(data) do
     unzipped = :zlib.gunzip(data)
     {:ok, contents} = :erl_tar.extract({:binary, unzipped}, [:memory])
